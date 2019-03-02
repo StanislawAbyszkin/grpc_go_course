@@ -1,6 +1,8 @@
 package main
 
 import (
+	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 	"context"
 	"fmt"
 	"io"
@@ -92,6 +94,30 @@ func (*server) GreetEveryone(stream greet_pb.GreetService_GreetEveryoneServer) e
 			return err
 		}
 	}
+}
+
+func (*server) GreetWithDeadline(ctx context.Context, req *greet_pb.GreetWithDeadlineRequest) (*greet_pb.GreetWithDeadlineResponse, error) {
+	fmt.Printf("Greet with Deadline function was invoked with %v\n", req)
+
+	for i:=0; i < 3; i++ {
+		if ctx.Err() == context.Canceled {
+			// the client cancelled the request
+			fmt.Println("The client cancelled the reuqest")
+			return nil, status.Error(codes.Canceled, "the clinet cancelled the request")
+		}
+		time.Sleep(1 * time.Second)
+	}
+	
+	firstName := req.GetGreeting().GetFirstName()
+	lastName := req.GetGreeting().GetLastName()
+
+	result := "Hello " + firstName + " " + lastName
+
+	res := &greet_pb.GreetWithDeadlineResponse{
+		Result: result,
+	}
+
+	return res, nil
 }
 
 func main() {
