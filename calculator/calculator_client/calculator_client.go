@@ -1,6 +1,7 @@
 package main
 
 import (
+	"time"
 	"bufio"
 	"context"
 	"fmt"
@@ -29,7 +30,9 @@ func main() {
 
 	// doPrimeNumberDecomposition(c)
 
-	doAverageSum(c)
+	// doAverageSum(c)
+
+	doFindMaximum(c)
 }
 
 func doSum(c calculatorpb.CalculatorServiceClient) {
@@ -79,7 +82,7 @@ func doAverageSum(c calculatorpb.CalculatorServiceClient) {
 	if err != nil {
 		log.Fatalf("error while calling server with clinet streaming, err: %v", err)
 	}
-	
+
 	fmt.Println("Input values")
 	fmt.Println("---------------------")
 	fmt.Print("-> ")
@@ -111,4 +114,63 @@ func doAverageSum(c calculatorpb.CalculatorServiceClient) {
 	}
 
 	fmt.Printf("Total average: %v\n", res.Average)
+}
+
+func doFindMaximum(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a Bi directional Streaming RPC")
+
+	stream, err := c.FindMaximum(context.Background())
+	if err != nil {
+		log.Fatalf("Error while creating stream; %v\n", err)
+	}
+
+	scanner := bufio.NewScanner(os.Stdin)
+
+	waitc := make(chan struct{})
+
+	fmt.Println("Input values")
+	fmt.Println("---------------------")
+	fmt.Print("-> ")
+
+	go func() {
+		for scanner.Scan() {
+			
+			text := scanner.Text()
+			// text = strings.Replace(text, "\n", "", -1)
+
+			if strings.Compare("", text) == 0 {
+				fmt.Println("Done sending values")
+				break
+			}
+
+			value, err := strconv.ParseInt(text, 0, 64)
+			if err != nil {
+				log.Printf("Couldn't convert given value %v to int", text)
+				break
+			}
+
+			req := &calculatorpb.FindMaximumRequest{
+				Number: value,
+			}
+			stream.Send(req)
+			time.Sleep(1* time.Millisecond)
+			fmt.Print("\n-> ")
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error while receiving from server; %v\n", err)
+			}
+			fmt.Printf("Current max value: %v", res.GetCurrentMax())
+		}
+		close(waitc)
+	}()
+	<-waitc
 }

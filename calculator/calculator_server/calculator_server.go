@@ -1,9 +1,9 @@
 package main
 
 import (
-	"io"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net"
@@ -44,7 +44,6 @@ func (*server) PrimeNumberDecomposition(req *calculatorpb.PrimeNumberDecompositi
 			k++
 		}
 
-
 	}
 	return nil
 }
@@ -56,7 +55,7 @@ func (*server) ComputeAverage(stream calculatorpb.CalculatorService_ComputeAvera
 	cnt := 0
 	for {
 		req, err := stream.Recv()
-		if err == io.EOF{
+		if err == io.EOF {
 			res := &calculatorpb.ComputeAverageResponse{
 				Average: float64(total / float64(cnt)),
 			}
@@ -66,8 +65,33 @@ func (*server) ComputeAverage(stream calculatorpb.CalculatorService_ComputeAvera
 			log.Fatal("Error while reading client stream: %v", err)
 		}
 		total += float64(req.GetValue())
-		cnt ++
+		cnt++
 	}
+}
+
+func (*server) FindMaximum(stream calculatorpb.CalculatorService_FindMaximumServer) error {
+	fmt.Printf("FindMaximum function was invoked with a bi-directional streaming request\n")
+	currMax := int64(-999999999) // start with pretty low min int
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			log.Fatalf("Error while reading client stream; %v\n", err)
+		}
+
+		currMax = max(currMax, req.GetNumber())
+
+		err = stream.Send(&calculatorpb.FindMaximumResponse{
+			CurrentMax: currMax,
+		})
+		if err != nil {
+			log.Fatalf("Error while sending to client; %v\n", err)
+		}
+	}
+
 }
 
 func main() {
@@ -84,5 +108,13 @@ func main() {
 
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
+	}
+}
+
+func max(a, b int64) int64 {
+	if a >= b {
+		return a
+	} else {
+		return b
 	}
 }
