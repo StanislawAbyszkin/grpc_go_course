@@ -6,6 +6,7 @@ option go_package="calculatorpb";
 service CalculatorService {
     rpc Sum(SumRequest) returns (SumResponse){};
     rpc PrimeNumberDecomposition(PrimeNumberDecompositionRequest) returns (stream PrimeNumberDecompositionResponse){};
+    rpc ComputeAverage(stream ComputeAverageRequest) returns (ComputeAverageResponse){};
 }
 
 message SumRequest {
@@ -23,4 +24,12 @@ message PrimeNumberDecompositionRequest{
 
 message PrimeNumberDecompositionResponse{
     int32 factor = 1;
+}
+
+message ComputeAverageRequest{
+    int64 value = 1;
+}
+
+message ComputeAverageResponse {
+    double average = 1;
 }

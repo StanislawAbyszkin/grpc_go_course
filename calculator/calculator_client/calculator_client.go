@@ -1,10 +1,14 @@
 package main
 
 import (
-	"io"
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/StanislawAbyszkin/grpc-go-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
@@ -23,7 +27,9 @@ func main() {
 
 	// doSum(c)
 
-	doPrimeNumberDecomposition(c)
+	// doPrimeNumberDecomposition(c)
+
+	doAverageSum(c)
 }
 
 func doSum(c calculatorpb.CalculatorServiceClient) {
@@ -52,7 +58,7 @@ func doPrimeNumberDecomposition(c calculatorpb.CalculatorServiceClient) {
 	fmt.Printf("Starting decomposing number: %v\n", req.NumberToDecompose)
 	for {
 		msg, err := resStream.Recv()
-		if err == io.EOF{
+		if err == io.EOF {
 			// we've reached the end of the stream
 			log.Printf("Reached stream EOF")
 			break
@@ -63,4 +69,46 @@ func doPrimeNumberDecomposition(c calculatorpb.CalculatorServiceClient) {
 
 		log.Printf("Factor: %v", msg.GetFactor())
 	}
+}
+
+func doAverageSum(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a Client Streaming RPC...")
+	scanner := bufio.NewScanner(os.Stdin)
+
+	stream, err := c.ComputeAverage(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling server with clinet streaming, err: %v", err)
+	}
+	
+	fmt.Println("Input values")
+	fmt.Println("---------------------")
+	fmt.Print("-> ")
+	for scanner.Scan() {
+		text := scanner.Text()
+		// text = strings.Replace(text, "\n", "", -1)
+
+		if strings.Compare("", text) == 0 {
+			fmt.Println("Done sending values")
+			break
+		}
+
+		value, err := strconv.ParseInt(text, 0, 64)
+		if err != nil {
+			log.Printf("Couldn't convert given value %v to int, sending existing data to get average", text)
+			break
+		}
+
+		req := &calculatorpb.ComputeAverageRequest{
+			Value: value,
+		}
+		stream.Send(req)
+		fmt.Print("-> ")
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("error while receiveing response from server, err: %v", err)
+	}
+
+	fmt.Printf("Total average: %v\n", res.Average)
 }

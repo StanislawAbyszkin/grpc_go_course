@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/StanislawAbyszkin/grpc-go-course/greet/greetpb"
 
@@ -25,7 +26,9 @@ func main() {
 
 	// doUnary(c)
 
-	doServerStreaming(c)
+	// doServerStreaming(c)
+
+	doClientStreaming(c)
 }
 
 func doUnary(c greet_pb.GreetServiceClient) {
@@ -71,4 +74,50 @@ func doServerStreaming(c greet_pb.GreetServiceClient) {
 		log.Printf("Response from GreetManyTimes: %v", msg.GetResult())
 	}
 
+}
+
+func doClientStreaming(c greet_pb.GreetServiceClient) {
+	fmt.Println("Starting to do a Client Streaming RPC...")
+
+	requests := []*greet_pb.LongGreetRequest{
+		&greet_pb.LongGreetRequest{
+			Greeting: &greet_pb.Greeting{
+				FirstName: "Stasiu",
+			},
+		},
+		&greet_pb.LongGreetRequest{
+			Greeting: &greet_pb.Greeting{
+				FirstName: "Nati",
+			},
+		},
+		&greet_pb.LongGreetRequest{
+			Greeting: &greet_pb.Greeting{
+				FirstName: "Kasia",
+			},
+		},
+		&greet_pb.LongGreetRequest{
+			Greeting: &greet_pb.Greeting{
+				FirstName: "Mis",
+			},
+		},
+	}
+
+	stream, err := c.LongGreet(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling server with clinet streaming, err: %v", err)
+	}
+
+	// we iterate over our slice and send each message individually
+	for _, req := range requests {
+		fmt.Printf("Sending req: %v\n", req)
+		stream.Send(req)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("error while receiveing response from server, err: %v", err)
+	}
+
+	fmt.Printf("Long Response: %v\n", res.Result)
 }
