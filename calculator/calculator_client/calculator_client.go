@@ -1,7 +1,6 @@
 package main
 
 import (
-	"time"
 	"bufio"
 	"context"
 	"fmt"
@@ -10,6 +9,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/StanislawAbyszkin/grpc-go-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
@@ -32,7 +35,9 @@ func main() {
 
 	// doAverageSum(c)
 
-	doFindMaximum(c)
+	// doFindMaximum(c)
+
+	doErrorUnary(c)
 }
 
 func doSum(c calculatorpb.CalculatorServiceClient) {
@@ -134,7 +139,7 @@ func doFindMaximum(c calculatorpb.CalculatorServiceClient) {
 
 	go func() {
 		for scanner.Scan() {
-			
+
 			text := scanner.Text()
 			// text = strings.Replace(text, "\n", "", -1)
 
@@ -153,7 +158,7 @@ func doFindMaximum(c calculatorpb.CalculatorServiceClient) {
 				Number: value,
 			}
 			stream.Send(req)
-			time.Sleep(1* time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 			fmt.Print("\n-> ")
 		}
 		stream.CloseSend()
@@ -173,4 +178,34 @@ func doFindMaximum(c calculatorpb.CalculatorServiceClient) {
 		close(waitc)
 	}()
 	<-waitc
+}
+
+func doErrorUnary(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Starting to do a SquareRoot Unary RPC...")
+
+	// correct call
+	doErrorCall(c, 10)
+
+	// error call
+	doErrorCall(c, -2)
+}
+
+func doErrorCall(c calculatorpb.CalculatorServiceClient, n int32) {
+	res, err := c.SquareRoot(context.Background(), &calculatorpb.SquareRootRequest{Number: n})
+
+	if err != nil {
+		respErr, ok := status.FromError(err)
+		if ok {
+			//actual error from gRPC (user error)
+			fmt.Printf("Error message from server: %v\n", respErr.Message())
+			fmt.Println(respErr.Code())
+			if respErr.Code() == codes.InvalidArgument {
+				fmt.Println("We probably sent a negative number!")
+			}
+		} else {
+			log.Fatalf("Big Error calling SquareRoot: %v", err)
+		}
+	}
+
+	fmt.Printf("Result of square root of %v: %v\n", n, res.GetNumberRoot())
 }
