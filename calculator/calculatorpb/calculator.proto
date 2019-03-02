@@ -5,6 +5,7 @@ option go_package="calculatorpb";
 
 service CalculatorService {
     rpc Sum(SumRequest) returns (SumResponse){};
+    rpc PrimeNumberDecomposition(PrimeNumberDecompositionRequest) returns (stream PrimeNumberDecompositionResponse){};
 }
 
 message SumRequest {
@@ -14,4 +15,12 @@ message SumRequest {
 
 message SumResponse {
     int32 result = 1;
+}
+
+message PrimeNumberDecompositionRequest{
+    int32 numberToDecompose = 1;
+}
+
+message PrimeNumberDecompositionResponse{
+    int32 factor = 1;
 }
